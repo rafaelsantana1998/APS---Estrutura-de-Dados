@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import time
 import matplotlib.pyplot as plt
 
 from src.models.spotify_dataset import SpotifyDatasetModel
@@ -25,7 +26,7 @@ else:
     model = load_data()
     controller = SortingController()
 
-    # Barra lateral (Sidebar) refinada com os controlos solicitados
+    # Barra lateral (Sidebar) com os controlos
     st.sidebar.header("Parâmetros do Teste")
     
     size = st.sidebar.selectbox(
@@ -45,7 +46,6 @@ else:
     )
     
     if st.sidebar.button("Executar Teste"):
-        # Mapeamento do nome amigável para a chave usada no modelo
         scenario_key_map = {
             "Aleatório": "aleatorio",
             "Melhor Caso (Ordenado)": "ordenado",
@@ -53,48 +53,63 @@ else:
         }
         selected_key = scenario_key_map[scenario_choice]
 
-        with st.spinner(fating_text := f"A processar amostra de {size} elementos para o cenário '{scenario_choice}'..."):
-            # Extrai apenas a amostra e gera os cenários
-            raw_data = model.get_sample(size, column_name=column)
-            scenarios = model.generate_scenarios(raw_data)
-            
-            # Seleciona apenas os dados do cenário escolhido pelo utilizador
-            data_to_sort = scenarios[selected_key]
-            
-            results = []
-            algorithms = ['Bubble Sort', 'Selection Sort', 'Insertion Sort', 'Merge Sort']
-            
-            for algo in algorithms:
-                metrics = controller.execute_benchmark(data_to_sort, algo)
-                results.append({
-                    'Algoritmo': algo,
-                    'Tempo (ms)': metrics['tempo_ms'],
-                    'Comparações': metrics['comparacoes'],
-                    'Trocas': metrics['trocas']
-                })
-            
-            df_results = pd.DataFrame(results)
-            
-            # Exibir resultados
-            st.subheader(f"Resultados para o Cenário: {scenario_choice} (n = {size})")
-            st.dataframe(df_results, use_container_width=True)
-            
-            # Gráfico de barras comparativo para o cenário selecionado
-            st.subheader("📊 Comparativo de Desempenho (Tempo em ms)")
-            fig, ax = plt.subplots(figsize=(10, 5))
-            
-            bars = ax.bar(df_results['Algoritmo'], df_results['Tempo (ms)'], color=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
-            ax.set_ylabel("Tempo (ms)")
-            ax.set_xlabel("Algoritmo de Ordenação")
-            ax.grid(axis='y', linestyle='--', alpha=0.7)
-            
-            # Adicionar os valores exatos em cima das barras
-            for bar in bars:
-                height = bar.get_height()
-                ax.annotate(f'{height}ms',
-                            xy=(bar.get_x() + bar.get_width() / 2, height),
-                            xytext=(0, 3),  # 3 points vertical offset
-                            textcoords="offset points",
-                            ha='center', va='bottom', fontsize=9)
+        # Extrai os dados
+        raw_data = model.get_sample(size, column_name=column)
+        scenarios = model.generate_scenarios(raw_data)
+        data_to_sort = scenarios[selected_key]
+        
+        results = []
+        algorithms = ['Bubble Sort', 'Selection Sort', 'Insertion Sort', 'Merge Sort']
+        total_algos = len(algorithms)
+        
+        # Elementos visuais de progresso na página principal
+        progress_text = st.empty()
+        progress_bar = st.progress(0)
+        status_box = st.info("A iniciar testes...")
 
-            st.pyplot(fig)
+        for i, algo in enumerate(algorithms):
+            progress_text.text(f"A executar: {algo} ({i+1}/{total_algos})...")
+            
+            # Medição individual com temporizador
+            start_time = time.time()
+            metrics = controller.execute_benchmark(data_to_sort, algo)
+            
+            results.append({
+                'Algoritmo': algo,
+                'Tempo (ms)': metrics['tempo_ms'],
+                'Comparações': metrics['comparacoes'],
+                'Trocas': metrics['trocas']
+            })
+            
+            # Atualiza a barra de progresso (de 0 a 100%)
+            progress_bar.progress((i + 1) / total_algos)
+        
+        # Limpa os elementos de progresso ao terminar
+        progress_text.empty()
+        progress_bar.empty()
+        status_box.empty()
+        
+        df_results = pd.DataFrame(results)
+        
+        # Exibir resultados
+        st.subheader(f"Resultados para o Cenário: {scenario_choice} (n = {size})")
+        st.dataframe(df_results, use_container_width=True)
+        
+        # Gráfico de barras comparativo
+        st.subheader("📊 Comparativo de Desempenho (Tempo em ms)")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        
+        bars = ax.bar(df_results['Algoritmo'], df_results['Tempo (ms)'], color=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
+        ax.set_ylabel("Tempo (ms)")
+        ax.set_xlabel("Algoritmo de Ordenação")
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+        
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{height}ms',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=9)
+
+        st.pyplot(fig)
