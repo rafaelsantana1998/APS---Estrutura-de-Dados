@@ -31,7 +31,7 @@ else:
     
     size = st.sidebar.selectbox(
         "Tamanho da Amostra (n):", 
-        [2500, 10000, 25000, 50000, 115000], 
+        [500, 2500, 25000, 50000, 115000], 
         index=2
     )
     
@@ -63,7 +63,6 @@ else:
         
         st.subheader(f"A executar testes para: {scenario_choice} (n = {size})")
         
-        # Cria um contentor ou linhas com uma barra de progresso dedicada para cada algoritmo
         progress_bars = {}
         status_texts = {}
         
@@ -78,23 +77,25 @@ else:
 
         st.write("---")
 
-        # Executa os algoritmos individualmente atualizando a respetiva barra
+        # Executa os algoritmos individualmente
         for algo in algorithms:
             status_texts[algo].text("A processar ordenação...")
-            progress_bars[algo].progress(50)  # Progresso intermédio
+            progress_bars[algo].progress(50)
             
             metrics = controller.execute_benchmark(data_to_sort, algo)
             
+            # Conversão de milissegundos para segundos (/ 1000)
+            tempo_segundos = metrics['tempo_ms'] / 1000.0
+            
             results.append({
                 'Algoritmo': algo,
-                'Tempo (ms)': metrics['tempo_ms'],
+                'Tempo (s)': round(tempo_segundos, 4),  # Arredondado a 4 casas decimais para maior precisão
                 'Comparações': metrics['comparacoes'],
                 'Trocas': metrics['trocas']
             })
             
-            # Concluído com sucesso (100%)
             progress_bars[algo].progress(100)
-            status_texts[algo].text(f"Concluído em {metrics['tempo_ms']} ms")
+            status_texts[algo].text(f"Concluído em {tempo_segundos:.4f} s")
         
         df_results = pd.DataFrame(results)
         
@@ -102,18 +103,18 @@ else:
         st.subheader("📋 Tabela Comparativa de Métricas")
         st.dataframe(df_results, use_container_width=True)
         
-        # Gráfico de barras comparativo
-        st.subheader("📊 Comparativo Gráfico de Desempenho (Tempo em ms)")
+        # Gráfico de barras comparativo (em segundos)
+        st.subheader("📊 Comparativo Gráfico de Desempenho (Tempo em s)")
         fig, ax = plt.subplots(figsize=(10, 5))
         
-        bars = ax.bar(df_results['Algoritmo'], df_results['Tempo (ms)'], color=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
-        ax.set_ylabel("Tempo (ms)")
+        bars = ax.bar(df_results['Algoritmo'], df_results['Tempo (s)'], color=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
+        ax.set_ylabel("Tempo (s)")
         ax.set_xlabel("Algoritmo de Ordenação")
         ax.grid(axis='y', linestyle='--', alpha=0.7)
         
         for bar in bars:
             height = bar.get_height()
-            ax.annotate(f'{height}ms',
+            ax.annotate(f'{height}s',
                         xy=(bar.get_x() + bar.get_width() / 2, height),
                         xytext=(0, 3),
                         textcoords="offset points",
