@@ -31,7 +31,7 @@ else:
     
     size = st.sidebar.selectbox(
         "Tamanho da Amostra (n):", 
-        [500, 2500, 25000, 50000, 115000], 
+        [2500, 10000, 25000, 50000, 115000], 
         index=2
     )
     
@@ -60,18 +60,29 @@ else:
         
         results = []
         algorithms = ['Bubble Sort', 'Selection Sort', 'Insertion Sort', 'Merge Sort']
-        total_algos = len(algorithms)
         
-        # Elementos visuais de progresso na página principal
-        progress_text = st.empty()
-        progress_bar = st.progress(0)
-        status_box = st.info("A iniciar testes...")
+        st.subheader(f"A executar testes para: {scenario_choice} (n = {size})")
+        
+        # Cria um contentor ou linhas com uma barra de progresso dedicada para cada algoritmo
+        progress_bars = {}
+        status_texts = {}
+        
+        for algo in algorithms:
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.markdown(f"**{algo}**")
+            with col2:
+                status_texts[algo] = st.empty()
+                status_texts[algo].text("A aguardar...")
+                progress_bars[algo] = st.progress(0)
 
-        for i, algo in enumerate(algorithms):
-            progress_text.text(f"A executar: {algo} ({i+1}/{total_algos})...")
+        st.write("---")
+
+        # Executa os algoritmos individualmente atualizando a respetiva barra
+        for algo in algorithms:
+            status_texts[algo].text("A processar ordenação...")
+            progress_bars[algo].progress(50)  # Progresso intermédio
             
-            # Medição individual com temporizador
-            start_time = time.time()
             metrics = controller.execute_benchmark(data_to_sort, algo)
             
             results.append({
@@ -81,22 +92,18 @@ else:
                 'Trocas': metrics['trocas']
             })
             
-            # Atualiza a barra de progresso (de 0 a 100%)
-            progress_bar.progress((i + 1) / total_algos)
-        
-        # Limpa os elementos de progresso ao terminar
-        progress_text.empty()
-        progress_bar.empty()
-        status_box.empty()
+            # Concluído com sucesso (100%)
+            progress_bars[algo].progress(100)
+            status_texts[algo].text(f"Concluído em {metrics['tempo_ms']} ms")
         
         df_results = pd.DataFrame(results)
         
-        # Exibir resultados
-        st.subheader(f"Resultados para o Cenário: {scenario_choice} (n = {size})")
+        # Exibir tabela final de resultados
+        st.subheader("📋 Tabela Comparativa de Métricas")
         st.dataframe(df_results, use_container_width=True)
         
         # Gráfico de barras comparativo
-        st.subheader("📊 Comparativo de Desempenho (Tempo em ms)")
+        st.subheader("📊 Comparativo Gráfico de Desempenho (Tempo em ms)")
         fig, ax = plt.subplots(figsize=(10, 5))
         
         bars = ax.bar(df_results['Algoritmo'], df_results['Tempo (ms)'], color=['#ff9999','#66b3ff','#99ff99','#ffcc99'])
