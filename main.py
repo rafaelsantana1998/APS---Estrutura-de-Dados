@@ -17,7 +17,7 @@ def main():
 
     # Tamanhos de entrada especificados no enunciado do trabalho
     # (Podes ajustar para valores maiores como 10000 ou 50000 se o computador aguentar)
-    sizes = [100, 500, 1000, 5000]
+    sizes = [2500, 10000, 25000, 50000, 115000]
     algorithms = ['Bubble Sort', 'Selection Sort', 'Insertion Sort', 'Merge Sort']
 
     print("\n" + "="*70)
