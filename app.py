@@ -31,7 +31,7 @@ else:
     
     size = st.sidebar.selectbox(
         "Tamanho da Amostra (n):", 
-        [2500, 10000, 25000, 50000, 115000], 
+        [1000, 5000, 10000, 20000, 50000], 
         index=2
     )
     
